@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: conda-install
+spec:
+  restartPolicy: OnFailure
+  volumes:
+    - name: home-volume
+      persistentVolumeClaim:
+        claimName: dsmr-vol-01
+  containers:
+    - name: conda-container
+      image: "nvidia/samples:vectoradd-cuda11.2.1"
+      volumeMounts:
+        - name: home-volume
+          mountPath: /kube/home/
+      command:
+        - /bin/bash
+        - -c
+        - |
+          # Add the NVIDIA GPG key
+          apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys A4B469963BF863CC
+          apt-get update && apt-get install -y wget --fix-missing
+
+          # Define Miniconda installation path
+          MINICONDA_PATH="/kube/home/.envs/conda"
+
+          # Check if Miniconda binary exists
+          if [ -f "$MINICONDA_PATH/bin/conda" ]; then
+              echo "Miniconda binary found. Checking if it is functional."
+              PATH="$MINICONDA_PATH/bin:$PATH"
+              if conda --version; then
+                  echo "Miniconda is functional. Skipping installation."
+                  exit 0
+              else
+                  echo "Miniconda binary is not functional. Reinstalling."
+                  rm -rf "$MINICONDA_PATH"
+                  wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh
+                  bash /tmp/miniconda.sh -b -p "$MINICONDA_PATH"
+                  rm /tmp/miniconda.sh
+                  PATH="$MINICONDA_PATH/bin:$PATH"
+              fi
+          else
+              echo "Miniconda binary not found. Installing Miniconda."
+              wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh
+              bash /tmp/miniconda.sh -b -p "$MINICONDA_PATH"
+              rm /tmp/miniconda.sh
+              PATH="$MINICONDA_PATH/bin:$PATH"
+          fi
+
+          #Confirm Installation
+          conda info
