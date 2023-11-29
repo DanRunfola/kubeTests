@@ -12,17 +12,19 @@ spec:
           persistentVolumeClaim:
             claimName: dsmr-vol-01
       containers:
-        - name: pytorch-setup-container
+        - name: distribute-torch-container
           image: "nvidia/samples:vectoradd-cuda11.2.1"
           resources:
             requests:
               memory: "16Gi"
               nvidia.com/gpu: 1
-              cpu: "2"
+              cpu: "1"
+              ephemeral-storage: "5Gi"
             limits:
               memory: "16Gi"
               nvidia.com/gpu: 1
-              cpu: "2"
+              cpu: "1"
+              ephemeral-storage: "5Gi"
           volumeMounts:
             - name: home-volume
               mountPath: /kube/home/
