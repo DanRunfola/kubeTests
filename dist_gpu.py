@@ -113,7 +113,7 @@ def main():
     print(f"Using device: {device}")
 
     net = Net().to(device)
-    net = torch.nn.parallel.DistributedDataParallel(net, device_ids=[rank])
+    net = torch.nn.parallel.DistributedDataParallel(net, device_ids=[0])
     print("Model initialized and wrapped in DistributedDataParallel.")
 
     # Define the loss function and optimizer
