@@ -51,6 +51,7 @@ def release_lock(lock_file):
         pass  # Ignore if the file was already removed
 
 def setup_distributed(claims_dir, rank, world_size):
+    job_identifier = os.environ.get('JOB_IDENTIFIER', 'default_identifier')
     lock_file = os.path.join(claims_dir, 'dist_lock')
     claims_file = os.path.join(claims_dir, 'claims.json')
 
@@ -60,6 +61,8 @@ def setup_distributed(claims_dir, rank, world_size):
         if os.path.exists(claims_file):
             with open(claims_file, 'r') as f:
                 claims = json.load(f)
+            if claims.get("job_identifier") != job_identifier:
+                claims = {'master_addr': socket.gethostbyname(socket.gethostname()), 'ranks': {}, 'job_identifier': job_identifier}
         else:
             claims = {'master_addr': None, 'ranks': {}}
 
