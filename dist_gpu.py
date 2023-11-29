@@ -8,6 +8,7 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 import json
+import socket
 
 # Define the CNN model
 class Net(nn.Module):
@@ -64,7 +65,7 @@ def setup_distributed(claims_dir, rank, world_size):
 
         if claims['master_addr'] is None:
             # Current pod becomes the master
-            claims['master_addr'] = os.environ['HOSTNAME']
+            claims['master_addr'] = socket.gethostbyname(socket.gethostname())
 
         if os.environ['HOSTNAME'] not in claims['ranks']:
             claims['ranks'][os.environ['HOSTNAME']] = rank
