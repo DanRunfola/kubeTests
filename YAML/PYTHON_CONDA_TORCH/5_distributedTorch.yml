@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: dist-torch
+  generateName: disttorch-
 spec:
   parallelism: 2
   template:
@@ -28,7 +28,9 @@ spec:
             - name: WORLD_SIZE
               value: "2"  # Total number of processes
             - name: JOB_IDENTIFIER
-              value: "$(cat /proc/sys/kernel/random/uuid)" 
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           command: ["/bin/bash", "-c"]
           args:
             - |

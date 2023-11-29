@@ -51,7 +51,7 @@ def release_lock(lock_file):
         pass  # Ignore if the file was already removed
 
 def setup_distributed(claims_dir, rank, world_size):
-    job_identifier = os.environ.get('JOB_IDENTIFIER', 'default_identifier')
+    job_identifier = os.environ.get('JOB_IDENTIFIER', 'default_identifier').split("-")[0]
     lock_file = os.path.join(claims_dir, 'dist_lock')
     claims_file = os.path.join(claims_dir, 'claims.json')
 
