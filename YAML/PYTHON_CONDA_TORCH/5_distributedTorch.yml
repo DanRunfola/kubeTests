@@ -3,7 +3,7 @@ kind: Job
 metadata:
   generateName: disttorch-
 spec:
-  parallelism: 2
+  parallelism: 10
   template:
     spec:
       restartPolicy: Never

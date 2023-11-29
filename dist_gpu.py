@@ -133,7 +133,7 @@ def main():
 
     # Train the model
     print("Starting training...")
-    for epoch in range(1):
+    for epoch in range(1000):
         epoch_loss = 0.0
         for i, data in enumerate(trainloader, 0):
             inputs, labels = data[0].to(device), data[1].to(device)
@@ -144,9 +144,8 @@ def main():
             optimizer.step()
             epoch_loss += loss.item()
 
-            if i % 2000 == 1999:
+            if i % 10 == 9:
                 print(f'[{epoch + 1}, {i + 1}] loss: {epoch_loss / 2000}')
-                epoch_loss = 0.0
 
     print("Training completed.")
     cleanup()
