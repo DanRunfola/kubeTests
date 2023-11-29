@@ -42,7 +42,7 @@ def acquire_lock(lock_file, timeout=300):
             # If lock file exists, check the timeout
             if time.time() - start_time > timeout:
                 raise TimeoutError(f"Timeout while waiting for file lock: {lock_file}")
-            time.sleep(1)  # Wait for a while before retrying
+            time.sleep(5)  # Wait for a while before retrying
 
 def release_lock(lock_file):
     try:
@@ -50,13 +50,13 @@ def release_lock(lock_file):
     except FileNotFoundError:
         pass  # Ignore if the file was already removed
 
-def setup_distributed(claims_dir, rank, world_size):
+def setup_distributed(claims_dir, world_size):
     job_identifier = os.environ.get('JOB_IDENTIFIER', 'default_identifier').split("-")[1]
     lock_file = os.path.join(claims_dir, 'dist_lock')
     claims_file = os.path.join(claims_dir, 'claims.json')
-
+    print("Acquiring Lock for Distributed Setup JSON access.")
     acquire_lock(lock_file)
-
+    print("Lock Acquired.")
     try:
         if os.path.exists(claims_file):
             with open(claims_file, 'r') as f:
@@ -71,6 +71,11 @@ def setup_distributed(claims_dir, rank, world_size):
             claims['master_addr'] = socket.gethostbyname(socket.gethostname())
 
         if os.environ['HOSTNAME'] not in claims['ranks']:
+            if not claims['ranks']:
+                rank = 0
+            else:
+                rank = max(claims['ranks'].values()) + 1
+            
             claims['ranks'][os.environ['HOSTNAME']] = rank
 
         with open(claims_file, 'w') as f:
@@ -83,7 +88,13 @@ def setup_distributed(claims_dir, rank, world_size):
 
     os.environ['MASTER_ADDR'] = master_addr
     os.environ['MASTER_PORT'] = '12345'
+    print("All node settings identified, proceeding to initialize process group.")
+    print(os.environ["MASTER_ADDR"])
+    print("Rank: " + str(rank))
+    print("World Size: " + str(world_size))
     dist.init_process_group(backend='nccl', rank=rank, world_size=world_size)
+    print("Process group initialized.")
+    return(rank)
 
 def cleanup():
     dist.destroy_process_group()
@@ -93,10 +104,9 @@ def main():
     claims_dir = '/kube/home/.claims/'
     os.makedirs(claims_dir, exist_ok=True)
 
-    rank = int(os.environ.get('RANK', '0'))
     world_size = int(os.environ.get('WORLD_SIZE', '1'))
 
-    setup_distributed(claims_dir, rank, world_size)
+    rank = setup_distributed(claims_dir, world_size)
     print(f"Setup completed. Rank: {rank}, World Size: {world_size}")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
