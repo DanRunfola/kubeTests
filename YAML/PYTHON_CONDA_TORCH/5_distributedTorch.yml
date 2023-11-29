@@ -25,16 +25,8 @@ spec:
             - name: home-volume
               mountPath: /kube/home/
           env:
-            - name: MASTER_ADDR
-              value: "localhost"  # This should be the address of the master node in a multi-node setup
-            - name: MASTER_PORT
-              value: "12345"  # This can be any free port
             - name: WORLD_SIZE
               value: "2"  # Total number of processes
-            - name: RANK
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
           command: ["/bin/bash", "-c"]
           args:
             - |

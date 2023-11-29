@@ -1,16 +1,13 @@
+import os
+import time
 import torch
 import torch.distributed as dist
 import torch.nn as nn
-import torch.nn.functional as F 
+import torch.nn.functional as F
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
-import time
-
-dist.init_process_group(backend='nccl', init_method='env://')
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+import json
 
 # Define the CNN model
 class Net(nn.Module):
@@ -32,42 +29,102 @@ class Net(nn.Module):
         x = self.fc3(x)
         return x
 
-net = Net().to(device)
-net = torch.nn.parallel.DistributedDataParallel(net)
+def acquire_lock(lock_file, timeout=300):
+    start_time = time.time()
+    while True:
+        try:
+            # Try to create a lock file
+            with os.fdopen(os.open(lock_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY), 'w') as f:
+                f.write(f"Lock acquired by {os.environ['HOSTNAME']}\n")
+            break
+        except FileExistsError:
+            # If lock file exists, check the timeout
+            if time.time() - start_time > timeout:
+                raise TimeoutError(f"Timeout while waiting for file lock: {lock_file}")
+            time.sleep(1)  # Wait for a while before retrying
 
-# Define the loss function and optimizer
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+def release_lock(lock_file):
+    try:
+        os.remove(lock_file)
+    except FileNotFoundError:
+        pass  # Ignore if the file was already removed
 
-# Load CIFAR-10 dataset
-transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-trainset = torchvision.datasets.CIFAR10(root='/kube/data', train=True, download=True, transform=transform)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=4, shuffle=True, num_workers=2)
+def setup_distributed(claims_dir, rank, world_size):
+    lock_file = os.path.join(claims_dir, 'dist_lock')
+    claims_file = os.path.join(claims_dir, 'claims.json')
 
-# Train the model
-start_time = time.time()
+    acquire_lock(lock_file)
 
-for epoch in range(1):  # Loop over the dataset multiple times
-    epoch_start_time = time.time()
-    running_loss = 0.0
-    for i, data in enumerate(trainloader, 0):
-        inputs, labels = data[0].to(device), data[1].to(device)
-        optimizer.zero_grad()  # Zero the parameter gradients
-        outputs = net(inputs)  # Forward
-        loss = criterion(outputs, labels)
-        loss.backward()  # Backward
-        optimizer.step()  # Optimize
-        running_loss += loss.item()
-        if i % 2000 == 1999:  # Print every 2000 mini-batches
-            print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 2000))
-            running_loss = 0.0
-    epoch_end_time = time.time()
-    print("Epoch %d completed in %s seconds" % (epoch+1, round(epoch_end_time - epoch_start_time, 2)))
+    try:
+        if os.path.exists(claims_file):
+            with open(claims_file, 'r') as f:
+                claims = json.load(f)
+        else:
+            claims = {'master_addr': None, 'ranks': {}}
 
-end_time = time.time()
-total_time = end_time - start_time
-print("Trained on: " + str(device))
-print("Total training time: %s seconds" % round(total_time, 2))
-print("----------------------------------")
-print("----------------------------------")
-   
+        if claims['master_addr'] is None:
+            # Current pod becomes the master
+            claims['master_addr'] = os.environ['HOSTNAME']
+
+        if os.environ['HOSTNAME'] not in claims['ranks']:
+            claims['ranks'][os.environ['HOSTNAME']] = rank
+
+        with open(claims_file, 'w') as f:
+            json.dump(claims, f)
+    finally:
+        release_lock(lock_file)
+
+    master_addr = claims['master_addr']
+    rank = claims['ranks'][os.environ['HOSTNAME']]
+
+    os.environ['MASTER_ADDR'] = master_addr
+    os.environ['MASTER_PORT'] = '12345'
+    dist.init_process_group(backend='nccl', rank=rank, world_size=world_size)
+
+def cleanup():
+    dist.destroy_process_group()
+
+def main():
+    claims_dir = '/kube/home/.claims/'
+    os.makedirs(claims_dir, exist_ok=True)
+
+    rank = int(os.environ.get('RANK', '0'))
+    world_size = int(os.environ.get('WORLD_SIZE', '1'))
+
+    setup_distributed(claims_dir, rank, world_size)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    net = Net().to(device)
+    net = torch.nn.parallel.DistributedDataParallel(net, device_ids=[rank])
+
+    # Define the loss function and optimizer
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+
+    # Load CIFAR-10 dataset
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ])
+    trainset = torchvision.datasets.CIFAR10(root='/kube/data', train=True,
+                                            download=True, transform=transform)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
+                                              shuffle=True, num_workers=2)
+
+    # Train the model
+    for epoch in range(1):
+        for i, data in enumerate(trainloader, 0):
+            inputs, labels = data[0].to(device), data[1].to(device)
+            optimizer.zero_grad()
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+
+            if i % 2000 == 1999:
+                print(f'[{epoch + 1}, {i + 1}] loss: {loss.item()}')
+
+    cleanup()
+
+if __name__ == '__main__':
+    main()
