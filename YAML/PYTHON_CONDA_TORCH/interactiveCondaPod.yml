@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: interactive-conda
+spec:
+  activeDeadlineSeconds: 1800  # Pod will be terminated after 30 minutes
+  restartPolicy: OnFailure
+  volumes:
+    - name: home-volume
+      persistentVolumeClaim:
+        claimName: dsmr-vol-01  # Ensure this is your correct PVC
+  containers:
+    - name: pytorch-setup-container
+      image: "nvidia/samples:vectoradd-cuda11.2.1"
+      resources:
+        requests:
+          memory: "32Gi"
+          nvidia.com/gpu: 1
+        limits:
+          memory: "32Gi"
+          nvidia.com/gpu: 1
+      volumeMounts:
+        - name: home-volume
+          mountPath: /kube/home/
+      command:
+        - /bin/bash
+        - -c
+        - |
+          # Set the Miniconda path and initialize
+          export MINICONDA_PATH="/kube/home/.envs/conda"
+          export PATH="$MINICONDA_PATH/bin:$PATH"
+          sleep infinity

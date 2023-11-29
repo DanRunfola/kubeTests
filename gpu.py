@@ -43,7 +43,7 @@ for device in devs:
     # Train the model
     start_time = time.time()
 
-    for epoch in range(1):  # Loop over the dataset multiple times
+    for epoch in range(5):  # Loop over the dataset multiple times
         epoch_start_time = time.time()
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):

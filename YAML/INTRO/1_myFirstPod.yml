@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: resource-info-pod
+spec:
+  activeDeadlineSeconds: 1800  # Pod will be terminated after 30 minutes
+  containers:
+    - name: resource-info-container
+      image: "nvidia/samples:vectoradd-cuda11.2.1"
+      resources:
+        requests:
+          memory: "1Gi"
+          cpu: "1"
+        limits:
+          memory: "1Gi"
+          cpu: "1"
+      command: ["/bin/sh"]
+      args:
+        - "-c"
+        - |
+          echo "CPU and Memory limits set for this container:"
+          echo "Memory limit: $MEMORY_LIMIT"
+          echo "CPU limit: $CPU_LIMIT"
+          echo "Running the main container process indefinitely..."
+          sleep infinity
+      env:
+        - name: MEMORY_LIMIT
+          valueFrom:
+            resourceFieldRef:
+              containerName: resource-info-container
+              resource: limits.memory
+        - name: CPU_LIMIT
+          valueFrom:
+            resourceFieldRef:
+              containerName: resource-info-container
+              resource: limits.cpu

@@ -1,0 +1,58 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dist-torch
+spec:
+  parallelism: 2
+  template:
+    spec:
+      restartPolicy: OnFailure
+      volumes:
+        - name: home-volume
+          persistentVolumeClaim:
+            claimName: dsmr-vol-01
+      containers:
+        - name: pytorch-setup-container
+          image: "nvidia/samples:vectoradd-cuda11.2.1"
+          resources:
+            requests:
+              memory: "32Gi"
+              nvidia.com/gpu: 1
+            limits:
+              memory: "32Gi"
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - name: home-volume
+              mountPath: /kube/home/
+          env:
+            - name: MASTER_ADDR
+              value: "localhost"  # This should be the address of the master node in a multi-node setup
+            - name: MASTER_PORT
+              value: "12345"  # This can be any free port
+            - name: WORLD_SIZE
+              value: "2"  # Total number of processes
+            - name: RANK
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              # Set the Miniconda path and initialize
+              export MINICONDA_PATH="/kube/home/.envs/conda"
+              export PATH="$MINICONDA_PATH/bin:$PATH"
+
+              # Add the NVIDIA GPG key
+              apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys A4B469963BF863CC
+              apt-get update && apt-get install -y git --fix-missing
+
+              # Activate the environment
+              source activate torchEnv
+
+              #Make sure our GPUs are loading
+              python -c "import torch; gpus = torch.cuda.device_count(); print(f'Available GPUs: {gpus}'); [print(f'GPU {gpu}: {torch.cuda.get_device_name(gpu)}') for gpu in range(gpus)]"
+
+              #Clone down our repo
+              git clone https://www.github.com/DanRunfola/kubeTests
+              cd kubeTests
+              python dist_gpu.py
