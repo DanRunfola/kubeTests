@@ -19,12 +19,12 @@ spec:
               memory: "16Gi"
               nvidia.com/gpu: 1
               cpu: "1"
-              ephemeral-storage: "5Gi"
+              ephemeral-storage: "1Gi"
             limits:
               memory: "16Gi"
               nvidia.com/gpu: 1
               cpu: "1"
-              ephemeral-storage: "5Gi"
+              ephemeral-storage: "1Gi"
           volumeMounts:
             - name: home-volume
               mountPath: /kube/home/
