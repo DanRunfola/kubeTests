@@ -113,7 +113,7 @@ def main():
     print(f"Using device: {device}")
 
     net = Net().to(device)
-    net = torch.nn.parallel.DistributedDataParallel(net, device_ids=[0])
+    net = torch.nn.parallel.DistributedDataParallel(net, device_ids=[rank])
     print("Model initialized and wrapped in DistributedDataParallel.")
 
     # Define the loss function and optimizer
@@ -128,7 +128,7 @@ def main():
     trainset = torchvision.datasets.CIFAR10(root='/kube/data', train=True,
                                             download=True, transform=transform)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=18 * world_size,
-                                              shuffle=True, num_workers=1, drop_last=True)
+                                              shuffle=True, num_workers=0, drop_last=True)
     print("Training dataset loaded.")
 
     # Train the model
