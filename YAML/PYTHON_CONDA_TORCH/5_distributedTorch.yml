@@ -6,7 +6,7 @@ spec:
   parallelism: 2
   template:
     spec:
-      restartPolicy: OnFailure
+      restartPolicy: Never
       volumes:
         - name: home-volume
           persistentVolumeClaim:
