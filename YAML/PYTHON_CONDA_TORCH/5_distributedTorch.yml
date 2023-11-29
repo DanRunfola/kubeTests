@@ -3,7 +3,7 @@ kind: Job
 metadata:
   generateName: disttorch-
 spec:
-  parallelism: 10
+  parallelism: 12
   template:
     spec:
       restartPolicy: Never
@@ -16,17 +16,19 @@ spec:
           image: "nvidia/samples:vectoradd-cuda11.2.1"
           resources:
             requests:
-              memory: "32Gi"
+              memory: "16Gi"
               nvidia.com/gpu: 1
+              cpu: "2"
             limits:
-              memory: "32Gi"
+              memory: "16Gi"
               nvidia.com/gpu: 1
+              cpu: "2"
           volumeMounts:
             - name: home-volume
               mountPath: /kube/home/
           env:
             - name: WORLD_SIZE
-              value: "10"  # Total number of processes
+              value: "12"  # Total number of processes
             - name: JOB_IDENTIFIER
               valueFrom:
                 fieldRef:
