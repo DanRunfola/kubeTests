@@ -3,7 +3,7 @@ kind: Job
 metadata:
   generateName: dist-
 spec:
-  parallelism: 12
+  parallelism: 4
   template:
     spec:
       restartPolicy: Never
@@ -30,7 +30,7 @@ spec:
               mountPath: /kube/home/
           env:
             - name: WORLD_SIZE
-              value: "12"  # Total number of processes
+              value: "4"  # Total number of processes
             - name: JOB_IDENTIFIER
               valueFrom:
                 fieldRef:
