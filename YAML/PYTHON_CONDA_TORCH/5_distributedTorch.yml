@@ -10,7 +10,7 @@ spec:
       volumes:
         - name: home-volume
           persistentVolumeClaim:
-            claimName: dsmr-vol-01
+            claimName: dsmillerrunfol-rwm
       containers:
         - name: distribute-torch-container
           image: "nvidia/samples:vectoradd-cuda11.2.1"
