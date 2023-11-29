@@ -26,7 +26,7 @@ spec:
               mountPath: /kube/home/
           env:
             - name: WORLD_SIZE
-              value: "2"  # Total number of processes
+              value: "10"  # Total number of processes
             - name: JOB_IDENTIFIER
               valueFrom:
                 fieldRef:
