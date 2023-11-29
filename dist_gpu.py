@@ -51,7 +51,7 @@ def release_lock(lock_file):
         pass  # Ignore if the file was already removed
 
 def setup_distributed(claims_dir, rank, world_size):
-    job_identifier = os.environ.get('JOB_IDENTIFIER', 'default_identifier').split("-")[0]
+    job_identifier = os.environ.get('JOB_IDENTIFIER', 'default_identifier').split("-")[1]
     lock_file = os.path.join(claims_dir, 'dist_lock')
     claims_file = os.path.join(claims_dir, 'claims.json')
 
@@ -89,6 +89,7 @@ def cleanup():
     dist.destroy_process_group()
 
 def main():
+    print("Initializing distributed training setup...")
     claims_dir = '/kube/home/.claims/'
     os.makedirs(claims_dir, exist_ok=True)
 
@@ -96,10 +97,14 @@ def main():
     world_size = int(os.environ.get('WORLD_SIZE', '1'))
 
     setup_distributed(claims_dir, rank, world_size)
+    print(f"Setup completed. Rank: {rank}, World Size: {world_size}")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+
     net = Net().to(device)
     net = torch.nn.parallel.DistributedDataParallel(net, device_ids=[rank])
+    print("Model initialized and wrapped in DistributedDataParallel.")
 
     # Define the loss function and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -114,9 +119,12 @@ def main():
                                             download=True, transform=transform)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
                                               shuffle=True, num_workers=2)
+    print("Training dataset loaded.")
 
     # Train the model
+    print("Starting training...")
     for epoch in range(1):
+        epoch_loss = 0.0
         for i, data in enumerate(trainloader, 0):
             inputs, labels = data[0].to(device), data[1].to(device)
             optimizer.zero_grad()
@@ -124,11 +132,15 @@ def main():
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
+            epoch_loss += loss.item()
 
             if i % 2000 == 1999:
-                print(f'[{epoch + 1}, {i + 1}] loss: {loss.item()}')
+                print(f'[{epoch + 1}, {i + 1}] loss: {epoch_loss / 2000}')
+                epoch_loss = 0.0
 
+    print("Training completed.")
     cleanup()
+    print("Cleanup completed, exiting.")
 
 if __name__ == '__main__':
     main()
