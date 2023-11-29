@@ -92,7 +92,7 @@ def setup_distributed(claims_dir, world_size):
     print(os.environ["MASTER_ADDR"])
     print("Rank: " + str(rank))
     print("World Size: " + str(world_size))
-    dist.init_process_group(backend='nccl', rank=rank, world_size=world_size)
+    dist.init_process_group(backend='gloo', rank=rank, world_size=world_size)
     print("Process group initialized.")
     return(rank)
 
