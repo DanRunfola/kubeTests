@@ -4,7 +4,7 @@ metadata:
   name: interactive-conda
 spec:
   activeDeadlineSeconds: 1800  # Pod will be terminated after 30 minutes
-  restartPolicy: OnFailure
+  restartPolicy: Never
   volumes:
     - name: home-volume
       persistentVolumeClaim:

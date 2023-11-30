@@ -3,7 +3,7 @@ kind: Pod
 metadata:
   name: conda-install
 spec:
-  restartPolicy: OnFailure
+  restartPolicy: Never
   volumes:
     - name: home-volume
       persistentVolumeClaim:

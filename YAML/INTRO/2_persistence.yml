@@ -3,7 +3,7 @@ kind: Pod
 metadata:
   name: claim-example
 spec:
-  restartPolicy: OnFailure
+  restartPolicy: Never
   activeDeadlineSeconds: 1800  # 30 minutes
   volumes:
     - name: home-volume
