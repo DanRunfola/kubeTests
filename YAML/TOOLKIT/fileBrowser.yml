@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: file-accesss
+spec:
+  restartPolicy: Always
+  volumes:
+    - name: home-volume
+      persistentVolumeClaim:
+        claimName: dsmillerrunfol-rwm
+  containers:
+    - name: conda-container
+      image: "nvidia/samples:vectoradd-cuda11.2.1"
+      volumeMounts:
+        - name: home-volume
+          mountPath: /kube/home/
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          echo "Disk space usage for /kube/home volume:"
+          df -h /kube/home
+          echo "Sleeping indefinitely..."
+          sleep infinity
