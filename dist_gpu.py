@@ -144,7 +144,7 @@ def main():
             optimizer.step()
             epoch_loss += loss.item()
 
-            if i % 10 == 9:
+            if i % 100 == 90:
                 print(f'[{epoch + 1}, {i + 1}] loss: {epoch_loss / 2000}')
 
     print("Training completed.")
