@@ -3,7 +3,7 @@ kind: Job
 metadata:
   generateName: dist-
 spec:
-  parallelism: 4
+  parallelism: 2
   template:
     spec:
       restartPolicy: Never

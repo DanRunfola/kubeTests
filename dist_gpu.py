@@ -133,7 +133,7 @@ def main():
 
     # Train the model
     print("Starting training...")
-    for epoch in range(1000):
+    for epoch in range(50):
         epoch_loss = 0.0
         for i, data in enumerate(trainloader, 0):
             inputs, labels = data[0].to(device), data[1].to(device)
